@@ -4,9 +4,7 @@ from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 
 
-cloud_config = {
-    'secure_connect_bundle': 'secure-connect-mercadolivre.zip'
-}
+cloud_config = {"secure_connect_bundle": "secure-connect-mercadolivre.zip"}
 
 with open("jonasraf97@gmail.com-token.json") as f:
     secrets = json.load(f)
@@ -20,7 +18,8 @@ session = cluster.connect()
 
 session.set_keyspace("mercadolivre")
 
-session.execute("""
+session.execute(
+    """
     CREATE TABLE IF NOT EXISTS usuario (
         id UUID PRIMARY KEY,
         nome TEXT,
@@ -30,15 +29,18 @@ session.execute("""
         email TEXT,
         end LIST<FROZEN<MAP<TEXT, TEXT>>>
     )
-""")
+"""
+)
 
 session.execute("""CREATE INDEX IF NOT EXISTS idx_nome ON usuario (nome);""")
-session.execute("""CREATE INDEX IF NOT EXISTS idx_nome ON vendedor (nome);""")
-session.execute("""CREATE INDEX IF NOT EXISTS idx_nome ON produto (nome);""")
+session.execute("""CREATE INDEX IF NOT EXISTS idx_nome_vendedor ON vendedor (nome);""")
+session.execute("""CREATE INDEX IF NOT EXISTS idx_nome_produto ON produto (nome);""")
 session.execute("""CREATE INDEX IF NOT EXISTS idx_nome ON compra (id);""")
 session.execute("""CREATE INDEX IF NOT EXISTS idx_nome ON favorito (id);""")
 
-session.execute("""
+
+session.execute(
+    """
     CREATE TABLE IF NOT EXISTS vendedor (
         id UUID PRIMARY KEY,
         nome TEXT,
@@ -48,9 +50,11 @@ session.execute("""
         cnpj TEXT,
         end LIST<FROZEN<MAP<TEXT, TEXT>>>
     )
-""")
+"""
+)
 
-session.execute("""
+session.execute(
+    """
     CREATE TABLE IF NOT EXISTS produto (
         id UUID PRIMARY KEY,
         nome TEXT,
@@ -58,9 +62,11 @@ session.execute("""
         descricao TEXT,
         categoria TEXT
     )
-""")
+"""
+)
 
-session.execute("""
+session.execute(
+    """
     CREATE TABLE IF NOT EXISTS compra (
         id UUID PRIMARY KEY,
         data_compra TEXT,
@@ -69,15 +75,18 @@ session.execute("""
         usuario_id UUID,
         produto_id UUID
     )
-""")
+"""
+)
 
-session.execute("""
+session.execute(
+    """
     CREATE TABLE IF NOT EXISTS favorito (
         id UUID PRIMARY KEY,
         usuario_id UUID,
         produto_id UUID
     )
-""")
+"""
+)
 
 """ GET_ALL """
 
@@ -100,30 +109,31 @@ def create_usuario():
     cpf = input("CPF: ")
     senha = input("Senha: ")
     email = input("Endereço: ")
-    endereco = [{
-        "rua": "Avenida Paulista",
-        "num": "123",
-        "bairro": "Bela Vista",
-        "cidade": "São Paulo",
-        "estado": "SP",
-        "cep": "01310-000"
-    },
+    endereco = [
         {
-        "rua": "Rua Augusta",
-        "num": "456",
-        "bairro": "Consolação",
-        "cidade": "São Paulo",
-        "estado": "SP",
-        "cep": "01305-000"
-    }]
+            "rua": "Avenida Paulista",
+            "num": "123",
+            "bairro": "Bela Vista",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01310-000",
+        },
+        {
+            "rua": "Rua Augusta",
+            "num": "456",
+            "bairro": "Consolação",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01305-000",
+        },
+    ]
     user_id = uuid.uuid4()
 
     query = """
         INSERT INTO usuario (id, nome, sobrenome, cpf, senha, email, end)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
     """
-    session.execute(query, (user_id, nome, sobrenome,
-                    cpf, senha, email, endereco))
+    session.execute(query, (user_id, nome, sobrenome, cpf, senha, email, endereco))
     print("Usuário inserido com ID", user_id)
 
 
@@ -136,26 +146,30 @@ def read_usuario(nome):
 
 def update_usuario(nome):
     query = f"SELECT * FROM usuario WHERE nome = %s"
-    rows = session.execute(query, (nome,))
+    rows = list(session.execute(query, (nome,)))
+
+    if not rows:
+        print("Usuário não encontrado.")
+        return
+
     user = rows[0]
-    user.nome = input("Mudar Nome:")
-    user.sobrenome = input("Mudar Sobrenome:")
-    user.email = input("Mudar Email:")
-    user.cpf = input("Mudar CPF:")
+    novo_nome = input("Mudar Nome:")
+    novo_sobrenome = input("Mudar Sobrenome:")
+    novo_email = input("Mudar Email:")
+    novo_cpf = input("Mudar CPF:")
 
     query = """
         UPDATE usuario
         SET nome = %s, sobrenome = %s, email = %s, cpf = %s
         WHERE id = %s
     """
-    session.execute(query, (user.nome, user.sobrenome,
-                    user.email, user.cpf, user.id))
+    session.execute(query, (novo_nome, novo_sobrenome, novo_email, novo_cpf, user.id))
     print("Usuário atualizado")
 
 
-def delete_usuario(nome, sobrenome):
-    query = "DELETE FROM usuario WHERE nome = %s AND sobrenome = %s"
-    session.execute(query, (nome, sobrenome))
+def delete_usuario(id):
+    query = "DELETE FROM usuario WHERE id = %s"
+    session.execute(query, (id,))
     print("Usuário deletado")
 
 
@@ -168,65 +182,71 @@ def create_vendedor():
     cpf = input("CPF: ")
     email = input("E-mail: ")
     cnpj = input("CNPJ: ")
-    endereco = [{
-        "rua": "Avenida Paulista",
-        "num": "123",
-        "bairro": "Bela Vista",
-        "cidade": "São Paulo",
-        "estado": "SP",
-        "cep": "01310-000"
-    },
+    endereco = [
         {
-        "rua": "Rua Augusta",
-        "num": "456",
-        "bairro": "Consolação",
-        "cidade": "São Paulo",
-        "estado": "SP",
-        "cep": "01305-000"
-    }]
+            "rua": "Avenida Paulista",
+            "num": "123",
+            "bairro": "Bela Vista",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01310-000",
+        },
+        {
+            "rua": "Rua Augusta",
+            "num": "456",
+            "bairro": "Consolação",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01305-000",
+        },
+    ]
     vendor_id = uuid.uuid4()
 
     query = """
         INSERT INTO vendedor (id, nome, sobrenome, cpf, email, cnpj, end)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
     """
-    session.execute(query, (vendor_id, nome, sobrenome,
-                    cpf, email, cnpj, endereco))
+    session.execute(query, (vendor_id, nome, sobrenome, cpf, email, cnpj, endereco))
     print("Vendedor inserido com ID", vendor_id)
 
 
 def read_vendedor(nome):
-    query = f"SELECT * FROM vendedor WHERE nome = %s"
+    query = f"SELECT * FROM vendedor WHERE nome = %s ALLOW FILTERING"
     rows = session.execute(query, (nome,))
     for row in rows:
         print(row)
 
 
 def update_vendedor(nome):
-    query = f"SELECT * FROM vendedor WHERE nome = %s"
-    rows = session.execute(query, (nome,))
+    query = f"SELECT * FROM vendedor WHERE nome = %s ALLOW FILTERING"
+    rows = list(session.execute(query, (nome,)))
+
+    if not rows:
+        print("Vendedor não encontrado.")
+        return
+
     vendor = rows[0]
-    vendor.nome = input("Mudar Nome:")
-    vendor.sobrenome = input("Mudar Sobrenome:")
-    vendor.email = input("Mudar Email:")
-    vendor.cpf = input("Mudar CPF:")
-    vendor.cnpj = input("Mudar CNPJ:")
+    novo_nome = input("Mudar Nome:")
+    novo_sobrenome = input("Mudar Sobrenome:")
+    novo_email = input("Mudar Email:")
+    novo_cpf = input("Mudar CPF:")
+    novo_cnpj = input("Mudar CNPJ:")
 
     query = """
         UPDATE vendedor
         SET nome = %s, sobrenome = %s, email = %s, cpf = %s, cnpj = %s
         WHERE id = %s
     """
-    session.execute(query, (vendor.nome, vendor.sobrenome,
-                    vendor.email, vendor.cpf, vendor.cnpj, vendor.id))
+    session.execute(
+        query, (novo_nome, novo_sobrenome, novo_email, novo_cpf, novo_cnpj, vendor.id)
+    )
     print("Vendedor atualizado")
 
 
-def delete_vendedor(nome, sobrenome):
-    query = "DELETE FROM vendedor WHERE nome = %s AND sobrenome = %s"
-    session.execute(query, (nome, sobrenome))
+def delete_vendedor(id):
+    query = "DELETE FROM vendedor WHERE id = %s"
+    session.execute(query, (id,))
     print("Vendedor deletado")
-
 
 """ PRODUTO """
 
@@ -254,27 +274,33 @@ def read_produto(nome):
 
 
 def update_produto(nome):
-    query = f"SELECT * FROM produto WHERE nome = %s"
-    rows = session.execute(query, (nome,))
+    query = f"SELECT * FROM produto WHERE nome = %s ALLOW FILTERING"
+    rows = list(session.execute(query, (nome,)))
+
+    if not rows:
+        print("Produto não encontrado.")
+        return
+
     product = rows[0]
-    product.nome = input("Mudar Nome do produto:")
-    product.preco = float(input("Mudar Preço do produto:"))
-    product.descricao = input("Mudar Descrição do produto:")
-    product.categoria = input("Mudar Categoria do produto:")
+    novo_nome = input("Mudar Nome do produto:")
+    novo_preco = float(input("Mudar Preço do produto:"))
+    nova_descricao = input("Mudar Descrição do produto:")
+    nova_categoria = input("Mudar Categoria do produto:")
 
     query = """
         UPDATE produto
         SET nome = %s, preco = %s, descricao = %s, categoria = %s
         WHERE id = %s
     """
-    session.execute(query, (product.nome, product.preco,
-                    product.descricao, product.categoria, product.id))
+    session.execute(
+        query, (novo_nome, novo_preco, nova_descricao, nova_categoria, product.id)
+    )
     print("Produto atualizado")
 
 
-def delete_produto(nome):
-    query = "DELETE FROM produto WHERE nome = %s"
-    session.execute(query, (nome,))
+def delete_produto(id):
+    query = "DELETE FROM produto WHERE id = %s"
+    session.execute(query, (id,))
     print("Produto deletado")
 
 
@@ -293,33 +319,68 @@ def create_compra():
         INSERT INTO compra (id, data_compra, data_entrega, status_compra, usuario_id, produto_id)
         VALUES (%s, %s, %s, %s, %s, %s)
     """
-    session.execute(query, (purchase_id, data_compra,
-                    data_entrega, status_compra, usuario_id, produto_id))
+    session.execute(
+        query,
+        (purchase_id, data_compra, data_entrega, status_compra, usuario_id, produto_id),
+    )
     print("Compra inserida com ID", purchase_id)
 
 
 def read_compra(compra_id):
-    query = f"SELECT * FROM compra WHERE id = %s"
+    try:
+        compra_id = uuid.UUID(compra_id)
+    except ValueError:
+        print("ID de compra inválido.")
+        return
+
+    query = "SELECT * FROM compra WHERE id = %s"
     rows = session.execute(query, (compra_id,))
+
     for row in rows:
         print(row)
 
 
 def update_compra(compra_id):
-    query = f"SELECT * FROM compra WHERE id = %s"
-    rows = session.execute(query, (compra_id,))
-    purchase = rows[0]
-    purchase.data_compra = input("Mudar Data da compra (DD-MM-AAAA):")
-    purchase.data_entrega = input("Mudar Data de entrega (DD-MM-AAAA):")
-    purchase.status_compra = input("Mudar Status da compra:")
+    try:
+        compra_id = uuid.UUID(
+            compra_id
+        )
+    except ValueError:
+        print("ID de compra inválido.")
+        return
 
-    query = """
+    query = f"SELECT * FROM compra WHERE id = %s"
+    rows = list(session.execute(query, (compra_id,)))
+
+    if not rows:
+        print("Compra não encontrada.")
+        return
+
+    compra_atual = rows[0]
+    novo_data_compra = input("Mudar Data da compra (DD-MM-AAAA):")
+    novo_data_entrega = input("Mudar Data de entrega (DD-MM-AAAA):")
+    novo_status_compra = input("Mudar Status da compra:")
+
+    compra_atualizada = compra_atual._replace(
+        data_compra=novo_data_compra,
+        data_entrega=novo_data_entrega,
+        status_compra=novo_status_compra,
+    )
+
+    update_query = """
         UPDATE compra
         SET data_compra = %s, data_entrega = %s, status_compra = %s
         WHERE id = %s
     """
-    session.execute(query, (purchase.data_compra,
-                    purchase.data_entrega, purchase.status_compra, purchase.id))
+    session.execute(
+        update_query,
+        (
+            compra_atualizada.data_compra,
+            compra_atualizada.data_entrega,
+            compra_atualizada.status_compra,
+            compra_id,
+        ),
+    )
     print("Compra atualizada")
 
 
@@ -348,7 +409,7 @@ def create_favorito():
 
 
 def list_favoritos(usuario_id):
-    query = "SELECT * FROM favorito WHERE usuario_id = %s"
+    query = "SELECT * FROM favorito WHERE usuario_id = %s ALLOW FILTERING"
     rows = session.execute(query, (usuario_id,))
     for row in rows:
         print("Produto ID:", row.produto_id)
@@ -363,7 +424,7 @@ def delete_favorito(usuario_id, produto_id):
 # CLI
 key = 0
 sub = 0
-while key != 'S':
+while key != "S":
     print("1-CRUD Usuário")
     print("2-CRUD Vendedor")
     print("3-CRUD Produto")
@@ -371,107 +432,120 @@ while key != 'S':
     print("5- CRUD Favoritos")
     key = input("Digite a opção desejada? (S para sair) ")
 
-    if key == '1':
+    if key == "1":
         print("Menu do Usuário")
         print("1-Create Usuário")
         print("2-Read Usuário")
         print("3-Update Usuário")
         print("4-Delete Usuário")
         sub = input("Digite a opção desejada? (V para voltar) ")
-        if sub == '1':
+        if sub == "1":
             print("Create usuario")
             create_usuario()
-        elif sub == '2':
+        elif sub == "2":
             nome = input("Read usuário, deseja algum nome especifico? ")
             read_usuario(nome)
-        elif sub == '3':
+        elif sub == "3":
             nome = input("Update usuário, deseja algum nome especifico? ")
             update_usuario(nome)
-        elif sub == '4':
+        elif sub == "4":
             print("delete usuario")
-            nome = input("Nome a ser deletado: ")
-            sobrenome = input("Sobrenome a ser deletado: ")
-            delete_usuario(nome, sobrenome)
+            get_all("usuario")
+            usuario_id = uuid.UUID(
+                input("Digite o ID do usuário para apagá-lo: ")
+            )
+            delete_usuario(usuario_id)
 
-    elif key == '2':
+    elif key == "2":
         print("Menu do Vendedor")
         print("1-Create Vendedor")
         print("2-Read Vendedor")
         print("3-Update Vendedor")
         print("4-Delete Vendedor")
         sub = input("Digite a opção desejada? (V para voltar) ")
-        if sub == '1':
+        if sub == "1":
             print("Create Vendedor")
             create_vendedor()
-        elif sub == '2':
+        elif sub == "2":
             nome = input("Read usuário, deseja algum nome especifico? ")
             read_vendedor(nome)
-        elif sub == '3':
+        elif sub == "3":
             nome = input("Update usuário, deseja algum nome especifico? ")
             update_vendedor(nome)
-        elif sub == '4':
+        elif sub == "4":
             print("Delete Vendedor")
-            nome = input("Nome a ser deletado: ")
-            sobrenome = input("Sobrenome a ser deletado: ")
-            delete_vendedor(nome, sobrenome)
+            get_all("vendedor")
+            vendedor_id = uuid.UUID(
+                input("Digite o ID do vendedor para apagá-lo: ")
+            )
+            delete_vendedor(vendedor_id)
 
-    elif key == '3':
+    elif key == "3":
         print("Menu do Produto")
         print("1. Create Produto")
         print("2. Read Produto")
         print("3. Update Produto")
         print("4. Delete Produto")
         sub = input("Digite a opção desejada? (V para voltar) ")
-        if sub == '1':
+        if sub == "1":
             print("Create Produto")
             create_produto()
-        elif sub == '2':
+        elif sub == "2":
             nome = input("Read Produto, deseja algum nome específico? ")
             read_produto(nome)
-        elif sub == '3':
+        elif sub == "3":
             nome = input("Update Produto, deseja algum nome específico? ")
             update_produto(nome)
-        elif sub == '4':
+        elif sub == "4":
             print("Delete Produto")
-            nome = input("Nome a ser deletado: ")
-            delete_produto(nome)
+            get_all("produto")
+            produto_id = uuid.UUID(
+                input("Digite o ID do produto para apagá-lo: ")
+            )
+            delete_produto(produto_id)
+            
 
-    elif key == '4':
+    elif key == "4":
         print("Menu da Compra")
         print("1. Create Compra")
         print("2. Read Compra")
         print("3. Update Compra")
         print("4. Delete Compra")
         sub = input("Digite a opção desejada? (V para voltar) ")
-        if sub == '1':
+        if sub == "1":
             print("Create Compra")
             create_compra()
-        elif sub == '2':
+        elif sub == "2":
             compra_id = input("Read Compra, deseja algum ID específico? ")
             read_compra(compra_id)
-        elif sub == '3':
+        elif sub == "3":
             compra_id = input("Update Compra, deseja algum ID específico? ")
             update_compra(compra_id)
-        elif sub == '4':
+        elif sub == "4":
             print("Delete Compra")
             compra_id = input("ID a ser deletado: ")
+            get_all("compra")
+            compra_id = uuid.UUID(
+                input("Digite o ID do compra para apagá-lo: ")
+            )
             delete_compra(compra_id)
 
-    elif key == '5':
+    elif key == "5":
         print("Menu de Favoritos")
         print("1. Adicionar Favorito")
         print("2. Listar Favoritos")
         print("3. Remover Favorito")
         sub = input("Digite a opção desejada? (V para voltar) ")
-        if sub == '1':
+        if sub == "1":
             print("Adicionar Favorito")
             create_favorito()
-        elif sub == '2':
+        elif sub == "2":
             get_all("usuario")
             usuario_id = uuid.UUID(
-                input("Digite o ID do usuário para listar seus favoritos: "))
+                input("Digite o ID do usuário para listar seus favoritos: ")
+            )
             list_favoritos(usuario_id)
-        elif sub == '3':
+        elif sub == "3":
             usuario_id = uuid.UUID(input("ID do usuário: "))
             produto_id = uuid.UUID(input("ID do produto: "))
             delete_favorito(usuario_id, produto_id)
